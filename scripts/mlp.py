@@ -82,9 +82,10 @@ def construct_datasets(data_path,pickle_file_path,image_size,validation_proporti
 	with open(data_path + 'train.csv', 'rb') as csvfile:
 		print('Reading train csv file...')
 		reader = csv.reader(csvfile, delimiter=',')
-		num_images = sum(1 for row in reader)
+		num_rows = sum(1 for row in reader)
+		num_images = num_rows - 1
 		csvfile.seek(0)
-		print(num_images,'rows counted')
+		print(num_rows,'rows counted')
 		dataset, labels = initialize_array(num_images,image_size,num_labels)
 		print('Data set', dataset.shape, labels.shape)
 		id = 0
@@ -102,10 +103,11 @@ def construct_datasets(data_path,pickle_file_path,image_size,validation_proporti
 	with open(data_path + 'test.csv', 'rb') as csvfile:
 		print('Reading test csv file...')
 		reader = csv.reader(csvfile, delimiter=',')
-		num_test_images = sum(1 for row in reader)
+		num_rows = sum(1 for row in reader)
+		num_images = num_rows - 1
 		csvfile.seek(0)
-		print(num_test_images,'rows counted')
-		test_dataset = initialize_dataset_array(num_test_images,image_size)
+		print(num_rows,'rows counted')
+		test_dataset = initialize_dataset_array(num_images,image_size)
 		print('Test Data set', test_dataset.shape)
 		id = 0
 		for row in reader:
@@ -221,12 +223,15 @@ with tf.Session(graph=graph) as session:
 
 # === GENERATE SUBMISSION FILE ===
 def generate_submission_file(test_prediction,output_file_path):
+	print('Generating submission file...')
 	with open(output_file_path, 'wb') as csvfile:
 		writer = csv.writer(csvfile, delimiter=',')
 		writer.writerow(['ImageId','Label'])
+		print(len(test_prediction))
 		for id in range(len(test_prediction)):
 			probabilities = test_prediction[id]
 			label = np.argmax(probabilities)
 			writer.writerow([id+1,label])
+		print('Results saved to',output_file_path)
 			
 generate_submission_file(test_prediction,output_file_path)
