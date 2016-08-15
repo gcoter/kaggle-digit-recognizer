@@ -9,11 +9,16 @@ from six.moves import cPickle as pickle
 image_size = 28
 num_labels = 10
 data_path = '../data/'
-pickle_file_path = data_path + 'train_MNIST.pickle'
+results_path = '../results/'
+pickle_file_path = data_path + 'MNIST.pickle'
+output_file_path = results_path + 'submission.csv'
 validation_proportion = 0.1
 
+def initialize_dataset_array(num_rows,image_size):
+	return np.ndarray((num_rows, image_size * image_size), dtype=np.uint8)
+
 def initialize_array(num_rows,image_size,num_labels):
-	dataset = np.ndarray((num_rows, image_size * image_size), dtype=np.float32)
+	dataset = initialize_dataset_array(num_rows,image_size)
 	labels = np.ndarray((num_rows, num_labels), dtype=np.int32)
 	return dataset, labels
 	
@@ -37,7 +42,7 @@ def one_hot_vector(num_labels,label):
 	vector[int(label)] = 1
 	return vector
 	
-def save(pickle_file_path,train_dataset,train_labels,valid_dataset,valid_labels):
+def save(pickle_file_path,train_dataset,train_labels,valid_dataset,valid_labels,test_dataset):
 	try:
 		f = open(pickle_file_path, 'wb')
 		save = {
@@ -45,6 +50,7 @@ def save(pickle_file_path,train_dataset,train_labels,valid_dataset,valid_labels)
 			'train_labels': train_labels,
 			'valid_dataset': valid_dataset,
 			'valid_labels': valid_labels,
+			'test_dataset': test_dataset
 		}
 		pickle.dump(save, f, pickle.HIGHEST_PROTOCOL)
 		f.close()
@@ -60,14 +66,21 @@ def load(pickle_file_path):
 		train_labels = save['train_labels']
 		valid_dataset = save['valid_dataset']
 		valid_labels = save['valid_labels']
+		test_dataset = save['test_dataset']
 		del save  # hint to help gc free up memory
 		print('Loaded datasets from ', pickle_file_path)
 	  
-	return train_dataset, train_labels, valid_dataset, valid_labels
+	return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset
 
 def construct_datasets(data_path,pickle_file_path,image_size,validation_proportion):	
+	train_dataset = None 
+	train_labels = None 
+	valid_dataset = None 
+	valid_labels = None 
+	test_dataset = None
+	""" Read train.csv first """
 	with open(data_path + 'train.csv', 'rb') as csvfile:
-		print('Reading csv file...')
+		print('Reading train csv file...')
 		reader = csv.reader(csvfile, delimiter=',')
 		num_images = sum(1 for row in reader)
 		csvfile.seek(0)
@@ -82,13 +95,29 @@ def construct_datasets(data_path,pickle_file_path,image_size,validation_proporti
 				labels[id-1] = one_hot_vector(num_labels,row[0])
 			id += 1
 		print(id, 'rows read')
-		shuffled_dataset, shuffled_labels = randomize(dataset, labels)
-		train_dataset, train_labels, valid_dataset, valid_labels = split_with_proportion(shuffled_dataset,shuffled_labels,validation_proportion)
-		print('Datasets constructed')
-		save(pickle_file_path,train_dataset,train_labels,valid_dataset,valid_labels)
-		return train_dataset, train_labels, valid_dataset, valid_labels
-		
-	return None, None, None, None
+	shuffled_dataset, shuffled_labels = randomize(dataset, labels)
+	train_dataset, train_labels, valid_dataset, valid_labels = split_with_proportion(shuffled_dataset,shuffled_labels,validation_proportion)
+	
+	""" Read test.csv """
+	with open(data_path + 'test.csv', 'rb') as csvfile:
+		print('Reading test csv file...')
+		reader = csv.reader(csvfile, delimiter=',')
+		num_test_images = sum(1 for row in reader)
+		csvfile.seek(0)
+		print(num_test_images,'rows counted')
+		test_dataset = initialize_dataset_array(num_test_images,image_size)
+		print('Test Data set', test_dataset.shape)
+		id = 0
+		for row in reader:
+			# skip first row
+			if id > 0:
+				test_dataset[id-1] = row[0:]
+			id += 1
+		print(id, 'rows read')
+	
+	print('Datasets constructed')
+	save(pickle_file_path,train_dataset,train_labels,valid_dataset,valid_labels,test_dataset)
+	return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset
 	
 def get_datasets(data_path,pickle_file_path,image_size,validation_proportion):
 	if os.path.isfile(pickle_file_path):
@@ -96,9 +125,10 @@ def get_datasets(data_path,pickle_file_path,image_size,validation_proportion):
 	else:
 		return construct_datasets(data_path,pickle_file_path,image_size,validation_proportion)
 
-train_dataset, train_labels, valid_dataset, valid_labels = get_datasets(data_path,pickle_file_path,image_size,validation_proportion)
+train_dataset, train_labels, valid_dataset, valid_labels, test_dataset = get_datasets(data_path,pickle_file_path,image_size,validation_proportion)
 print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
+print('Test set', test_dataset.shape)
 
 # === HYPERPARAMETERS ===
 network_shape = [image_size * image_size,1024,num_labels]
@@ -159,7 +189,7 @@ def accuracy(predictions, labels):
 	
 # === TRAINING ===
 batch_size = 150
-num_epochs = 2
+num_epochs = 1
 num_steps = len(train_dataset)/batch_size * num_epochs
 old_valid_accuracy = None
 with tf.Session(graph=graph) as session:
@@ -184,13 +214,19 @@ with tf.Session(graph=graph) as session:
 			valid_accuracy = accuracy(valid_prediction, valid_labels)
 			print("Validation accuracy: %.1f%%" % valid_accuracy)
 			old_valid_accuracy = valid_accuracy
-
-"""			
+		
 # === TEST ===
-test_dataset = []
-test_prediction = session.run(prediction, feed_dict={tf_dataset : test_dataset, keep_prob : 1.0})
+	test_prediction = session.run(prediction, feed_dict={tf_dataset : test_dataset, keep_prob : 1.0})
+	print('Test prediction',test_prediction.shape)
 
 # === GENERATE SUBMISSION FILE ===
-def generate_submission_file(test_prediction):
-	print("TO DO")
-"""
+def generate_submission_file(test_prediction,output_file_path):
+	with open(output_file_path, 'wb') as csvfile:
+		writer = csv.writer(csvfile, delimiter=',')
+		writer.writerow(['ImageId','Label'])
+		for id in range(len(test_prediction)):
+			probabilities = test_prediction[id]
+			label = np.argmax(probabilities)
+			writer.writerow([id+1,label])
+			
+generate_submission_file(test_prediction,output_file_path)
