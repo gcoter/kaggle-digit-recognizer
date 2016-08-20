@@ -152,9 +152,9 @@ def draw_image_from_row(image_size,row):
 	draw_image(row_to_matrix(image_size,row))
 
 # === HYPERPARAMETERS ===
-network_shape = [image_size * image_size,700,550,450,num_labels]
+network_shape = [image_size * image_size,700,700,num_labels]
 num_layers = len(network_shape)
-initial_learning_rate = 0.001
+initial_learning_rate = 1E-3
 decay_steps = 0
 decay_rate = 0.0
 regularization_parameter = 0.0
@@ -199,13 +199,11 @@ with graph.as_default():
 		loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, tf_labels))
 
 		# L2 Regularization
-		"""
 		regularizers = tf.nn.l2_loss(weights[0]) + tf.nn.l2_loss(biases[0])
 		for i in range(1,num_layers-1):
 			regularizers += tf.nn.l2_loss(weights[i]) + tf.nn.l2_loss(biases[i])
 
 		loss += regularization_parameter * regularizers
-		"""
 	
 		tf.scalar_summary("loss", loss)
 	
