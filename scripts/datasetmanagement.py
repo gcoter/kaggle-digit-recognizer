@@ -6,6 +6,7 @@ import csv
 
 # === CONSTANTS ===
 image_size = 28
+max_pixel_value = 255
 num_labels = 10
 data_path = '../data/'
 results_path = '../results/'
@@ -31,6 +32,9 @@ def randomize(dataset,labels):
 		shuffled_labels[new_index] = labels[old_index]
 	print('Randomized dataset and labels')
 	return shuffled_dataset, shuffled_labels
+	
+def normalize(array,max_value):
+	return (array - float(max_value) / 2) / float(max_value)
 	
 def split_with_proportion(shuffled_dataset,shuffled_labels,validation_proportion):
 	validation_index = int(len(shuffled_dataset) * validation_proportion)
@@ -75,7 +79,7 @@ def load(pickle_file_path):
 	  
 	return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset
 
-def construct_datasets(data_path,pickle_file_path,image_size,validation_proportion):	
+def construct_datasets(data_path,pickle_file_path,image_size,max_value,validation_proportion):	
 	train_dataset = None 
 	train_labels = None 
 	valid_dataset = None 
@@ -121,14 +125,19 @@ def construct_datasets(data_path,pickle_file_path,image_size,validation_proporti
 		print(id, 'rows read')
 	
 	print('Datasets constructed')
+	train_dataset = normalize(train_dataset,max_value)
+	valid_dataset = normalize(valid_dataset,max_value)
+	test_dataset = normalize(test_dataset,max_value)
+	print('Datasets normalized')
+	
 	save(pickle_file_path,train_dataset,train_labels,valid_dataset,valid_labels,test_dataset)
 	return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset
 	
-def get_datasets(data_path,pickle_file_path,image_size,validation_proportion):
+def get_datasets(data_path,pickle_file_path,image_size,max_value,validation_proportion):
 	if os.path.isfile(pickle_file_path):
 		return load(pickle_file_path)
 	else:
-		return construct_datasets(data_path,pickle_file_path,image_size,validation_proportion)
+		return construct_datasets(data_path,pickle_file_path,image_size,max_value,validation_proportion)
 		
 # === VERIFY DATA ===
 def row_to_matrix(image_size,row):
