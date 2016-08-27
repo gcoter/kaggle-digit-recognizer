@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 # === CONSTANTS ===
 image_size = 28
+max_pixel_value = 255
 num_labels = 10
 data_path = '../data/'
 results_path = '../results/'
@@ -16,13 +17,17 @@ output_file_path = results_path + 'submission.csv'
 validation_proportion = 0.025
 
 # === CONSTRUCT DATASET ===
-train_dataset, train_labels, valid_dataset, valid_labels, test_dataset = get_datasets(data_path,pickle_file_path,image_size,validation_proportion)
+train_dataset, train_labels, valid_dataset, valid_labels, test_dataset = get_datasets(data_path,pickle_file_path,image_size,max_pixel_value,validation_proportion)
 print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape)
 
+print('Training set : mean =',np.mean(train_dataset),"std =",np.std(train_dataset))
+print('Validation set : mean =',np.mean(valid_dataset),"std =",np.std(valid_dataset))
+print('Test set : mean =',np.mean(test_dataset),"std =",np.std(test_dataset))
+
 # === HYPERPARAMETERS ===
-network_shape = [image_size * image_size,700,700,num_labels]
+network_shape = [image_size * image_size,1024,num_labels]
 num_layers = len(network_shape)
 initial_learning_rate = 1E-3
 decay_steps = 0
@@ -60,9 +65,11 @@ with graph.as_default():
 
 	# Forward computation (with dropout)
 	logits = tf.matmul(tf_dataset, weights[0]) + biases[0]
-	for i in range(1,num_layers-1):
+	for i in range(1,num_layers-2):
 		with tf.name_scope("layer_"+str(i)) as scope:
 			logits = tf.matmul(tf.nn.dropout(tf.nn.relu(logits), keep_prob), weights[i]) + biases[i]
+			
+	logits = tf.matmul(logits, weights[-1]) + biases[-1]
 
 	# Cross entropy loss
 	with tf.name_scope("loss") as scope:
