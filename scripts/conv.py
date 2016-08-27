@@ -165,7 +165,7 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 		
 		if (step % display_step == 0):
 			print("Minibatch loss at step %d: %f" % (step, l))
-			minibatch_accuracy = accuracy(session.run(prediction, feed_dict={tf_dataset : batch_data, tf_labels : batch_labels, keep_prob : 1.0}), batch_labels)
+			minibatch_accuracy = accuracy(session.run(prediction, feed_dict={tf_dataset : batch_data, keep_prob : 1.0}), batch_labels)
 			print("Minibatch accuracy: %.1f%%" % minibatch_accuracy)
 
 			valid_prediction = session.run(prediction, feed_dict={tf_dataset : valid_dataset, tf_labels : valid_labels, keep_prob : 1.0})
@@ -198,8 +198,17 @@ with tf.Session(graph=graph) as session:
 	weights_values, biases_values = run_training(session, num_steps, display_step, batch_size, train_dataset, train_labels, valid_dataset, valid_labels)
 	
 	# === TEST ===
-	# test_prediction = session.run(prediction, feed_dict={tf_dataset : test_dataset, keep_prob : 1.0})
-	# print('Test prediction',test_prediction.shape)
+	test_prediction = []
+	num_test_steps = len(test_dataset)/batch_size
+	print('*** Start testing (',num_test_steps,'steps ) ***')
+	for step in range(num_test_steps):
+		offset = (step * batch_size) % (test_dataset.shape[0] - batch_size)
+		batch_data = test_dataset[offset:(offset + batch_size), :]
+		pred = session.run(prediction, feed_dict={tf_dataset : batch_data, keep_prob : 1.0})
+		test_prediction.extend(pred)
+		
+	test_prediction = np.array(test_prediction)
+	print('Test prediction',test_prediction.shape)
 
 # === GENERATE SUBMISSION FILE ===
 def generate_submission_file(test_prediction,output_file_path):
