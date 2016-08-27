@@ -8,41 +8,44 @@ import matplotlib.pyplot as plt
 
 # === CONSTANTS ===
 image_size = 28
+max_pixel_value = 255
 num_labels = 10
 data_path = '../data/'
 results_path = '../results/'
 pickle_file_path = data_path + 'MNIST.pickle'
 output_file_path = results_path + 'submission.csv'
-validation_proportion = 0.025
+validation_proportion = 0.050
 
 # === CONSTRUCT DATASET ===
-train_dataset, train_labels, valid_dataset, valid_labels, test_dataset = get_datasets(data_path,pickle_file_path,image_size,validation_proportion)
+train_dataset, train_labels, valid_dataset, valid_labels, test_dataset = get_datasets(data_path,pickle_file_path,image_size,max_pixel_value,validation_proportion)
 print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape)
 
 # === HYPERPARAMETERS ===
 patch_size = 5
-depths = [1,16,16]
+depths = [1,32,64]
 image_size_after_conv = image_size / 4
-network_shape = [image_size_after_conv * image_size_after_conv * depths[-1],64,num_labels]
+network_shape = [image_size_after_conv * image_size_after_conv * depths[-1],1024,num_labels]
 
-initial_learning_rate = 1E-2
+initial_learning_rate = 1e-4
 dropout_keep_prob = 0.5
 
 # === MODEL DEFINITION ===
-def new_weights(shape):
-	return tf.truncated_normal(shape, stddev=0.1)
-	
-def new_biases(shape):
-	return tf.Variable(tf.zeros(shape))
+def weight_variable(shape):
+  initial = tf.truncated_normal(shape, stddev=0.1)
+  return tf.Variable(initial)
 
+def bias_variable(shape):
+  initial = tf.constant(0.1, shape=shape)
+  return tf.Variable(initial)
+  
 def conv2d(x, W):
-	return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-	
-def max_pool(x,k=2):
-	return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, 2, 2, 1], padding='SAME')
-	
+  return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+
+def max_pool_2x2(x):
+  return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+
 def convolutions(x,image_size,patch_size,depths):
 	# Variables
 	tf_reshaped_x = tf.reshape(x, [-1,image_size,image_size,1])
@@ -57,13 +60,13 @@ def convolutions(x,image_size,patch_size,depths):
 	
 	with tf.name_scope("conv_layer_1"):
 		conv_1 = conv2d(tf_reshaped_x, weights_conv_1)
-		hidden_1 = tf.nn.relu(conv_1 + biases_conv_1)
-		max_pool_1 = max_pool(hidden_1)
+		h_1 = tf.nn.relu(conv_1 + biases_conv_1)
+		max_pool_1 = max_pool(h_1)
 		
 	with tf.name_scope("conv_layer_2"):
 		conv_2 = conv2d(max_pool_1, weights_conv_2)
-		hidden_2 = tf.nn.relu(conv_2 + biases_conv_2)
-		max_pool_2 = max_pool(hidden_2)
+		h_2 = tf.nn.relu(conv_2 + biases_conv_2)
+		max_pool_2 = max_pool(h_2)
 		
 	return max_pool_2
 	
@@ -71,51 +74,66 @@ def mlp(x,network_shape,keep_prob):
 	num_layers = len(network_shape)
 	
 	# Variables
-	weights = []
-	biases = []
-
-	# Constructs the network according to the given shape array
-	for i in range(num_layers-1):
-		weights.append(new_weights([network_shape[i], network_shape[i+1]]))
-		biases.append(new_biases([network_shape[i+1]]))
+	## Weights
+	weights_1 = new_weights([network_shape[0], network_shape[1]])
+	weights_2 = new_weights([network_shape[1], network_shape[2]])
+	
+	## Biases
+	biases_1 = new_biases([network_shape[1]])
+	biases_2 = new_biases([network_shape[2]])
 		
 	# Forward computation (with dropout)
-	logits = tf.matmul(x, weights[0]) + biases[0]
-	for i in range(1,num_layers-1):
-		with tf.name_scope("layer_"+str(i)) as scope:
-			logits = tf.matmul(tf.nn.dropout(tf.nn.relu(logits), keep_prob), weights[i]) + biases[i]
-			
-	return logits
+	logits_1 = tf.matmul(x, weights_1) + biases_1
+	hidden_1 = tf.nn.relu(logits_1)
+	hidden_1_dropout = tf.nn.dropout(hidden_1, keep_prob)
+	
+	logits_2 = tf.matmul(hidden_1_dropout, weights_2) + biases_2
+
+	return logits_2
+
 
 graph = tf.Graph()
 with graph.as_default():
-	# Input
-	tf_dataset = tf.placeholder(tf.float32, shape=(None, image_size * image_size))
-	tf_labels = tf.placeholder(tf.float32, shape=(None, num_labels))
+	# Placeholders
+	tf_dataset = tf.placeholder(tf.float32, shape=[None, 784])
+	tf_labels = tf.placeholder(tf.float32, shape=[None, 10])
 
-	# Dropout keep probability (set to 1.0 for validation and test)
+	# First Convolutional Layer
+	W_conv1 = weight_variable([5, 5, 1, 32])
+	b_conv1 = bias_variable([32])
+	x_image = tf.reshape(tf_dataset, [-1,28,28,1])
+
+	h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+	h_pool1 = max_pool_2x2(h_conv1)
+
+	# Second Convolutional Layer
+	W_conv2 = weight_variable([5, 5, 32, 64])
+	b_conv2 = bias_variable([64])
+
+	h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+	h_pool2 = max_pool_2x2(h_conv2)
+
+	# Densely Connected Layer
+	W_fc1 = weight_variable([7 * 7 * 64, 1024])
+	b_fc1 = bias_variable([1024])
+
+	h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
+	h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+
+	# Dropout
 	keep_prob = tf.placeholder(tf.float32)
+	h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
-	# Global Step for learning rate decay
-	global_step = tf.Variable(0)
-	
-	conv = convolutions(tf_dataset,image_size,patch_size,depths)
-	reshaped_conv = tf.reshape(conv, [-1, image_size_after_conv * image_size_after_conv * depths[-1]])
-	logits = mlp(reshaped_conv,network_shape,keep_prob)
+	# Readout Layer
+	W_fc2 = weight_variable([1024, 10])
+	b_fc2 = bias_variable([10])
 
-	# Cross entropy loss
-	with tf.name_scope("loss") as scope:
-		loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, tf_labels))	
-	
-	with tf.name_scope("train") as scope:
-		learning_rate = initial_learning_rate
+	prediction=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
-		# Passing global_step to minimize() will increment it at each step.
-		optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
+	# Train and Evaluate the Model
+	loss = tf.reduce_mean(-tf.reduce_sum(tf_labels * tf.log(tf.clip_by_value(prediction,1e-10,1.0)), reduction_indices=[1]))
+	optimizer = tf.train.AdamOptimizer(1e-4).minimize(loss)
 
-	# Predictions for the training, validation, and test data.
-	prediction = tf.nn.softmax(logits)
-	
 def accuracy(predictions, labels):
 	return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1)) / predictions.shape[0])
 	
@@ -133,9 +151,7 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 	display_steps = []
 	train_points = []
 	valid_points = []
-	tf.initialize_all_variables().run()
-	
-	summary_writer = tf.train.SummaryWriter(results_path, graph=session.graph)
+	session.run(tf.initialize_all_variables())
 	
 	print('*** Start training',num_epochs,'epochs (',num_steps,'steps) with batch size',batch_size,'***')
 	for step in range(num_steps+1):
@@ -170,10 +186,10 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 	return weights_values, biases_values
 	
 # === TRAINING ===
-batch_size = 500
+batch_size = 50
 num_epochs = 5
 display_step = 100
-num_steps = 1000 # len(train_dataset)/batch_size * num_epochs
+num_steps = 2500 # len(train_dataset)/batch_size * num_epochs
 
 weights_values = None
 biases_values = None
@@ -198,4 +214,4 @@ def generate_submission_file(test_prediction,output_file_path):
 			writer.writerow([id+1,label])
 		print('Results saved to',output_file_path)
 			
-# generate_submission_file(test_prediction,output_file_path)
+generate_submission_file(test_prediction,output_file_path)
