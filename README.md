@@ -10,13 +10,22 @@ Here is the list of the models I tested so far :
 ### Simple MLP
 This model is the most simple :
 
-1. One input layer (784 neurons)
-2. Some hidden layers
-3. One output layer (10 neurons)
+* One input layer (784 neurons)
+* Some hidden layers
+* One output layer (10 neurons)
 
 I used RELU as activation function between hidden layers and Softmax for the output layer. 
 
 To avoid overfitting, I also added dropout. I tried L2 regularization as well.
+
+### Convolutional network
+For the moment, I implemented a quite classical structure :
+
+* First convolutional layer (5x5 patch, stride 1, depth : 32)
+* First max pooling layer (2x2 kernel, strides 2)
+* Second convolutional layer (5x5 patch, stride 1, depth : 64)
+* Second max pooling layer (2x2 kernel, strides 2)
+* A simple MLP
 
 ## Results
 
