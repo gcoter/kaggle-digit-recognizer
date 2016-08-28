@@ -3,16 +3,17 @@ import numpy as np
 from six.moves import cPickle as pickle
 import os.path
 import csv
+import constants
 
 # === CONSTANTS ===
-image_size = 28
-max_pixel_value = 255
-num_labels = 10
-data_path = '../data/'
-results_path = '../results/'
-pickle_file_path = data_path + 'MNIST.pickle'
-output_file_path = results_path + 'submission.csv'
-validation_proportion = 0.025
+image_size = constants.image_size
+max_pixel_value = constants.max_pixel_value
+num_labels = constants.num_labels
+data_path = constants.data_path
+results_path = constants.results_path
+pickle_file_path = constants.pickle_file_path
+output_file_path = constants.output_file_path
+validation_proportion = constants.validation_proportion
 
 # === CONSTRUCT DATASET ===
 def initialize_dataset_array(num_rows,image_size):

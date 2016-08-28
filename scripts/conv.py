@@ -3,18 +3,18 @@ import numpy as np
 import tensorflow as tf
 import csv
 from datasetmanagement import get_datasets
-
+import constants
 import matplotlib.pyplot as plt
 
 # === CONSTANTS ===
-image_size = 28
-max_pixel_value = 255
-num_labels = 10
-data_path = '../data/'
-results_path = '../results/'
-pickle_file_path = data_path + 'MNIST.pickle'
-output_file_path = results_path + 'submission.csv'
-validation_proportion = 0.050
+image_size = constants.image_size
+max_pixel_value = constants.max_pixel_value
+num_labels = constants.num_labels
+data_path = constants.data_path
+results_path = constants.results_path
+pickle_file_path = constants.pickle_file_path
+output_file_path = constants.output_file_path
+validation_proportion = constants.validation_proportion
 
 # === CONSTRUCT DATASET ===
 train_dataset, train_labels, valid_dataset, valid_labels, test_dataset = get_datasets(data_path,pickle_file_path,image_size,max_pixel_value,validation_proportion)
@@ -27,7 +27,6 @@ patch_size = 5
 depths = [1,32,64]
 image_size_after_conv = image_size / 4
 network_shape = [image_size_after_conv * image_size_after_conv * depths[-1],1024,num_labels]
-
 initial_learning_rate = 1e-4
 dropout_keep_prob = 0.5
 
