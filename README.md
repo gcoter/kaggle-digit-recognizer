@@ -32,7 +32,7 @@ For the moment, I implemented a quite classical structure :
 | Model                 | Best accuracy achieved |
 | --------------------- |:----------------------:|
 | Simple MLP            | 85.6%                  |
-| Convolutional network | 97.8%                  |
+| Convolutional network | 97.5%                  |
 
 
 ## References
