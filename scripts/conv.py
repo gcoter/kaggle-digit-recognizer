@@ -6,6 +6,8 @@ from datasetmanagement import get_datasets
 import constants
 import matplotlib.pyplot as plt
 
+import time
+
 # === CONSTANTS ===
 image_size = constants.image_size
 max_pixel_value = constants.max_pixel_value
@@ -127,6 +129,8 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 	valid_points = []
 	session.run(tf.initialize_all_variables())
 	
+	time_0 = time.time()
+	
 	print('*** Start training',num_epochs,'epochs (',num_steps,'steps) with batch size',batch_size,'***')
 	for step in range(num_steps+1):
 		# Pick an offset within the training data, which has been randomized.
@@ -149,6 +153,12 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 			display_steps.append(step)
 			train_points.append(minibatch_accuracy)
 			valid_points.append(valid_accuracy)
+			
+			t = time.time()
+			d = t - time_0
+			time_0 = t
+			
+			print("Time :",d,"to compute",display_step,"steps")
 			
 	valid_prediction = session.run(prediction, feed_dict={tf_dataset : valid_dataset, tf_labels : valid_labels, keep_prob : 1.0})
 	valid_accuracy = accuracy(valid_prediction, valid_labels)
