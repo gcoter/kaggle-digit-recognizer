@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 
 import time
 
+# === GLOBAL VARIABLE ===
+conv_id = 0
+
 # === CONSTANTS ===
 image_size = constants.image_size
 max_pixel_value = constants.max_pixel_value
@@ -25,7 +28,7 @@ print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape)
 
 # === HYPERPARAMETERS ===
-initial_learning_rate = 1e-4
+initial_learning_rate = 1e-2
 dropout_keep_prob = 0.5
 
 # === MODEL DEFINITION ===
@@ -39,6 +42,13 @@ def new_biases(shape):
   
 def conv2d(x, W):
 	return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+	
+def complete_conv2d(x, currentDepth, newDepth, patch_size):
+	weights_conv = new_weights([patch_size,patch_size,currentDepth,newDepth])
+	biases_conv = new_biases([newDepth])
+	conv = tf.nn.conv2d(x, weights_conv, strides=[1, 1, 1, 1], padding='SAME')
+	h_conv = tf.nn.relu(conv + biases_conv)
+	return h_conv
 
 def max_pool(x, k=2):
 	return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, 2, 2, 1], padding='SAME')
@@ -57,65 +67,32 @@ with graph.as_default():
 	# (N,28,28,1)
 	tf_reshaped_x = tf.reshape(tf_dataset, [-1,image_size,image_size,1])
 	
-	""" Convolution 1 """
-	weights_conv_1 = new_weights([5,5,1,32])
-	biases_conv_1 = new_biases([32])
+	with tf.variable_scope('conv_1'):
+		conv_1 = complete_conv2d(tf_reshaped_x,currentDepth=1,newDepth=16,patch_size=5) # (N,28,28,16)
+	with tf.variable_scope('max_pool_1'):
+		max_pool_1 = max_pool(conv_1) # (N,14,14,32)
+	with tf.variable_scope('conv_2'):
+		conv_2 = complete_conv2d(max_pool_1,currentDepth=16,newDepth=32,patch_size=5) # (N,28,28,32)
+	with tf.variable_scope('inception_1'):
+		input = conv_2
+		with tf.variable_scope('1x1_branch'):
+			with tf.variable_scope('initial_1x1'):
+				initial_1x1 = complete_conv2d(input,currentDepth=32,newDepth=8,patch_size=1) # (N,14,14,8)
+			with tf.variable_scope('5x5'):
+				conv_5x5 = complete_conv2d(initial_1x1,currentDepth=8,newDepth=16,patch_size=5) # (N,14,14,16)
+			with tf.variable_scope('3x3'):
+				conv_3x3 = complete_conv2d(initial_1x1,currentDepth=8,newDepth=16,patch_size=3) # (N,14,14,16)
+		with tf.variable_scope('avg_pool_branch'):
+			with tf.variable_scope('initial_avg_pool'):
+				initial_avg_pool = average_pool(input, stride=1) # (N,14,14,32)
+			with tf.variable_scope('1x1'):
+				conv_1x1 = complete_conv2d(initial_avg_pool,currentDepth=32,newDepth=24,patch_size=1) # (N,14,14,24)
+		with tf.variable_scope('concatenation'):
+			inception = tf.concat(3, [initial_1x1, conv_5x5, conv_3x3, conv_1x1]) # (N,14,14,64)
+	with tf.variable_scope('max_pool_2'):
+		max_pool_2 = max_pool(inception) # (N,7,7,64)
 	
-	# (N,28,28,32)
-	conv_1 = conv2d(tf_reshaped_x, weights_conv_1)
-	h_1 = tf.nn.relu(conv_1 + biases_conv_1)
-	
-	""" Max pool 1 """
-	# (N,14,14,32)
-	max_pool_1 = max_pool(h_1)
-	
-	""" Inception 1 """
-	# First 1 by 1 convolution...
-	weights_conv_0_1x1 = new_weights([1,1,32,8])
-	biases_conv_0_1x1 = new_biases([8])
-	
-	# (N,14,14,8)
-	conv_0_1x1 = conv2d(max_pool_1, weights_conv_0_1x1)
-	h_conv_0_1x1 = tf.nn.relu(conv_0_1x1 + biases_conv_0_1x1)
-	
-	# ... followed by other convolutions
-	# 5 by 5
-	weights_conv_1_5x5 = new_weights([5,5,8,16])
-	biases_conv_1_5x5 = new_biases([16])
-	
-	# (N,14,14,16)
-	conv_1_5x5 = conv2d(h_conv_0_1x1, weights_conv_1_5x5)
-	h_conv_1_5x5 = tf.nn.relu(conv_1_5x5 + biases_conv_1_5x5)
-	
-	# 3 by 3
-	weights_conv_1_3x3 = new_weights([3,3,8,16])
-	biases_conv_1_3x3 = new_biases([16])
-	
-	# (N,14,14,16)
-	conv_1_3x3 = conv2d(h_conv_0_1x1, weights_conv_1_3x3)
-	h_conv_1_3x3 = tf.nn.relu(conv_1_3x3 + biases_conv_1_3x3)
-	
-	# Average pooling followed by 1 by 1 convolution
-	# (N,14,14,32)
-	avg_pool_0 = average_pool(max_pool_1, stride=1)
-	
-	weights_conv_1_1x1 = new_weights([1,1,32,24])
-	biases_conv_1_1x1 = new_biases([24])
-	
-	# (N,14,14,24)
-	conv_1_1x1 = conv2d(avg_pool_0, weights_conv_1_1x1)
-	h_conv_1_1x1 = tf.nn.relu(conv_1_1x1 + biases_conv_1_1x1)
-	
-	# Concatenation
-	# (N,14,14,8+16+16+24=64)
-	inception_1 = tf.concat(3, [h_conv_0_1x1, h_conv_1_5x5, h_conv_1_3x3, h_conv_1_1x1])
-	
-	""" Max pool 2 """
-	# (N,7,7,64)
-	max_pool_2 = max_pool(inception_1)
-	
-	# (N,7 * 7 * 64)
-	reshaped_conv_output = tf.reshape(max_pool_2, [-1, 7 * 7 * 64])
+	reshaped_conv_output = tf.reshape(max_pool_2, [-1, 7 * 7 * 64]) # (N,7 * 7 * 64)
 	
 	""" MLP """
 	# Variables
@@ -149,7 +126,7 @@ def plot_results(display_steps, train_points, valid_points):
 	plt.autoscale(tight=True)
 	#plt.xlim(0, display_steps[-1])
 	plt.show()
-		
+
 def run_training(session, num_steps, display_step, batch_size, train_dataset, train_labels, valid_dataset, valid_labels):
 	old_valid_accuracy = None
 	weights_values = None
@@ -203,7 +180,7 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 batch_size = 50
 num_epochs = 5
 display_step = 100
-num_steps = 2500 # len(train_dataset)/batch_size * num_epochs
+num_steps = len(train_dataset)/batch_size * num_epochs
 
 weights_values = None
 biases_values = None

@@ -173,7 +173,7 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 batch_size = 50
 num_epochs = 5
 display_step = 100
-num_steps = 2500 # len(train_dataset)/batch_size * num_epochs
+num_steps = len(train_dataset)/batch_size * num_epochs
 
 weights_values = None
 biases_values = None
