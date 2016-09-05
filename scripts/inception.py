@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 import csv
-from datasetmanagement import get_datasets
+from datasetmanagement import get_datasets, randomize
 import constants
 import matplotlib.pyplot as plt
 
@@ -127,8 +127,7 @@ def plot_results(display_steps, train_points, valid_points):
 	#plt.xlim(0, display_steps[-1])
 	plt.show()
 
-def run_training(session, num_steps, display_step, batch_size, train_dataset, train_labels, valid_dataset, valid_labels):
-	old_valid_accuracy = None
+def run_training(session, num_epochs, display_step, batch_size, train_dataset, train_labels, valid_dataset, valid_labels):
 	weights_values = None
 	biases_values = None
 	display_steps = []
@@ -138,34 +137,42 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 	
 	time_0 = time.time()
 	
+	num_steps_per_epoch = len(train_dataset)/batch_size
+	num_steps = num_steps_per_epoch * num_epochs
+	
 	print('*** Start training',num_epochs,'epochs (',num_steps,'steps) with batch size',batch_size,'***')
-	for step in range(num_steps+1):
-		# Pick an offset within the training data, which has been randomized.
-		offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
-		# Generate a minibatch.
-		batch_data = train_dataset[offset:(offset + batch_size), :]
-		batch_labels = train_labels[offset:(offset + batch_size), :]
+	for epoch in range(num_epochs):
+		print('=== Start epoch',epoch,'===')
+		if epoch > 0:
+			train_dataset, train_labels = randomize(train_dataset,train_labels)
+			print('Randomized dataset and labels for training')
+		for step in range(num_steps_per_epoch):
+			# Pick an offset within the training data, which has been randomized.
+			offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
+			# Generate a minibatch.
+			batch_data = train_dataset[offset:(offset + batch_size), :]
+			batch_labels = train_labels[offset:(offset + batch_size), :]
 
-		_, l, predictions = session.run([optimizer, loss, prediction], feed_dict={tf_dataset : batch_data, tf_labels : batch_labels, keep_prob : dropout_keep_prob})
-		
-		if (step % display_step == 0):
-			print("Minibatch loss at step %d: %f" % (step, l))
-			minibatch_accuracy = accuracy(session.run(prediction, feed_dict={tf_dataset : batch_data, keep_prob : 1.0}), batch_labels)
-			print("Minibatch accuracy: %.1f%%" % minibatch_accuracy)
+			_, l, predictions = session.run([optimizer, loss, prediction], feed_dict={tf_dataset : batch_data, tf_labels : batch_labels, keep_prob : dropout_keep_prob})
+			
+			if (step % display_step == 0):
+				print("Minibatch loss at step %d: %f" % (step, l))
+				minibatch_accuracy = accuracy(session.run(prediction, feed_dict={tf_dataset : batch_data, keep_prob : 1.0}), batch_labels)
+				print("Minibatch accuracy: %.1f%%" % minibatch_accuracy)
 
-			valid_prediction = session.run(prediction, feed_dict={tf_dataset : valid_dataset, tf_labels : valid_labels, keep_prob : 1.0})
-			valid_accuracy = accuracy(valid_prediction, valid_labels)
-			print("Validation accuracy: %.1f%%" % valid_accuracy)
-			
-			display_steps.append(step)
-			train_points.append(minibatch_accuracy)
-			valid_points.append(valid_accuracy)
-			
-			t = time.time()
-			d = t - time_0
-			time_0 = t
-			
-			print("Time :",d,"to compute",display_step,"steps")
+				valid_prediction = session.run(prediction, feed_dict={tf_dataset : valid_dataset, tf_labels : valid_labels, keep_prob : 1.0})
+				valid_accuracy = accuracy(valid_prediction, valid_labels)
+				print("Validation accuracy: %.1f%%" % valid_accuracy)
+				
+				display_steps.append(step)
+				train_points.append(minibatch_accuracy)
+				valid_points.append(valid_accuracy)
+				
+				t = time.time()
+				d = t - time_0
+				time_0 = t
+				
+				print("Time :",d,"to compute",display_step,"steps")
 			
 	valid_prediction = session.run(prediction, feed_dict={tf_dataset : valid_dataset, tf_labels : valid_labels, keep_prob : 1.0})
 	valid_accuracy = accuracy(valid_prediction, valid_labels)
@@ -177,16 +184,15 @@ def run_training(session, num_steps, display_step, batch_size, train_dataset, tr
 	return weights_values, biases_values
 	
 # === TRAINING ===
-batch_size = 50
+batch_size = 100
 num_epochs = 5
 display_step = 100
-num_steps = len(train_dataset)/batch_size * num_epochs
 
 weights_values = None
 biases_values = None
 
 with tf.Session(graph=graph) as session:
-	weights_values, biases_values = run_training(session, num_steps, display_step, batch_size, train_dataset, train_labels, valid_dataset, valid_labels)
+	weights_values, biases_values = run_training(session, num_epochs, display_step, batch_size, train_dataset, train_labels, valid_dataset, valid_labels)
 	
 	# === TEST ===
 	test_prediction = []
