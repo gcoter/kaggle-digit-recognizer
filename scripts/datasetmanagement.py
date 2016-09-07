@@ -134,7 +134,7 @@ def construct_datasets(data_path,pickle_file_path,image_size,max_value,validatio
 	save(pickle_file_path,train_dataset,train_labels,valid_dataset,valid_labels,test_dataset)
 	return train_dataset, train_labels, valid_dataset, valid_labels, test_dataset
 	
-def get_datasets(data_path,pickle_file_path,image_size,max_value,validation_proportion):
+def get_datasets():
 	if os.path.isfile(pickle_file_path):
 		return load(pickle_file_path)
 	else:
