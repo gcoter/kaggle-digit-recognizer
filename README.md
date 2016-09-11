@@ -8,6 +8,10 @@ Here is the list of the models I tested so far :
 * Convolutional network
 * Convolutional network with Inception module
 
+In order to compare the different models, I decided to have them run for the same number of epochs. I use Adam for optimization and cross entropy to calculate the loss.
+
+My goal is to achieve the best accuracy within one hour of training on my CPU.
+
 ### Simple MLP
 I simply stacked fully connected layers.
 
@@ -34,8 +38,9 @@ I read a lot about the Inception module designed by Google (used in GoogLeNet) a
 
 So I took the previous network and replaced the second convolution with an inception module.
 
+I noticed it speeds up training on my CPU, however for the moment I haven't succeded to get a better accuracy than a "simple" ConvNet.
+
 ## Results
-To compare the different models, I decided to have them run for the same number of epochs.
 
 | Model                  | Epochs | Batch size | Real time   | Best accuracy achieved |
 | ---------------------- |:------:|:----------:|:-----------:|:----------------------:|
