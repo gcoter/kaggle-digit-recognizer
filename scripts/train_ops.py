@@ -25,6 +25,7 @@ def plot_results(display_steps, train_points, valid_points):
 	#plt.xlim(0, display_steps[-1])
 	plt.show()
 
+""" Main method for training """
 def run_training(session, model, num_epochs, display_step, batch_size, train_dataset, train_labels, valid_dataset, valid_labels):
 	display_steps = []
 	train_points = []
@@ -50,21 +51,26 @@ def run_training(session, model, num_epochs, display_step, batch_size, train_dat
 			batch_data = train_dataset[offset:(offset + batch_size), :]
 			batch_labels = train_labels[offset:(offset + batch_size), :]
 
-			_, l, predictions = session.run([model.train_step, model.loss, model.prediction], feed_dict={model.batch : batch_data, model.labels : batch_labels, model.keep_prob : model.dropout_keep_prob})
+			# Train step
+			_, l = session.run([model.train_step, model.loss], feed_dict={model.batch : batch_data, model.labels : batch_labels, model.keep_prob : model.dropout_keep_prob})
 			
 			if (step_id % display_step == 0):
+				# Calculate minibatch accuracy
 				print("Minibatch loss at step %d: %f" % (step_id, l))
 				minibatch_accuracy = accuracy(session.run(model.prediction, feed_dict={model.batch : batch_data, model.keep_prob : 1.0}), batch_labels)
 				print("Minibatch accuracy: %.1f%%" % minibatch_accuracy)
 
+				# Calculate accuracy on validation set
 				valid_prediction = session.run(model.prediction, feed_dict={model.batch : valid_dataset, model.labels : valid_labels, model.keep_prob : 1.0})
 				valid_accuracy = accuracy(valid_prediction, valid_labels)
 				print("Validation accuracy: %.1f%%" % valid_accuracy)
 				
+				# For plotting
 				display_steps.append(step_id)
 				train_points.append(minibatch_accuracy)
 				valid_points.append(valid_accuracy)
 				
+				# Time spent is measured
 				t = time.time()
 				d = t - time_0
 				time_0 = t

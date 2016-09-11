@@ -19,6 +19,11 @@ def get_mean_variance(input):
 	return mean, variance
 	
 # === MODELS ===
+"""
+AbstractModel generalizes the construction of a model.
+
+Subclasses implements the only variable part.
+"""
 class AbstractModel(object):
 	def __init__(self):
 		return
