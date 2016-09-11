@@ -1,3 +1,7 @@
+"""
+Functions to define some basic structures with tensorflow
+"""
+
 import tensorflow as tf
 
 def new_weights(shape):

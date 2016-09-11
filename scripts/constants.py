@@ -1,4 +1,7 @@
-# === CONSTANTS ===
+"""
+Shared constants
+"""
+
 image_size = 28
 max_pixel_value = 255
 num_labels = 10

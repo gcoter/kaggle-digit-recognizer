@@ -1,3 +1,7 @@
+"""
+Useful functions to manage the dataset
+"""
+
 from __future__ import print_function
 import numpy as np
 from six.moves import cPickle as pickle

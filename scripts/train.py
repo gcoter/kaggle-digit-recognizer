@@ -1,3 +1,7 @@
+"""
+Main code
+"""
+
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
@@ -22,11 +26,11 @@ initial_learning_rate = 1e-2
 dropout_keep_prob = 0.5
 
 # === DEFINE MODEL ===
-model = models.InceptionConvNet()
+model = models.SimpleConvNet() """ <-- define the model here """
 	
 # === TRAINING ===
-batch_size = 50
-num_epochs = 2
+batch_size = 100
+num_epochs = 10
 display_step = 100
 
 with tf.Session(graph=model.graph) as session:
