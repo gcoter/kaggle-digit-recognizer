@@ -39,7 +39,7 @@ class AbstractModel(object):
 			self.keep_prob = tf.placeholder(tf.float32)
 
 			# Forward computation (model has to be defined in subclasses)
-			self.logits_out = self.model(self.batch) """ <-- this part is defined by subclasses """
+			self.logits_out = self.model(self.batch) # <-- this part is defined by subclasses
 
 			# Cross entropy loss
 			with tf.name_scope("loss") as scope:

@@ -26,7 +26,7 @@ initial_learning_rate = 1e-2
 dropout_keep_prob = 0.5
 
 # === DEFINE MODEL ===
-model = models.SimpleConvNet() """ <-- define the model here """
+model = models.SimpleConvNet() # <-- define the model here
 	
 # === TRAINING ===
 batch_size = 100
