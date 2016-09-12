@@ -6,8 +6,8 @@ from __future__ import print_function
 import numpy as np
 from six.moves import cPickle as pickle
 import os.path
-import csv
 import constants
+import pandas as pd
 
 # === CONSTANTS ===
 image_size = constants.image_size
@@ -19,15 +19,7 @@ pickle_file_path = constants.pickle_file_path
 output_file_path = constants.output_file_path
 validation_proportion = constants.validation_proportion
 
-# === CONSTRUCT DATASET ===
-def initialize_dataset_array(num_rows,image_size):
-	return np.ndarray((num_rows, image_size * image_size), dtype=np.int32)
-
-def initialize_array(num_rows,image_size,num_labels):
-	dataset = initialize_dataset_array(num_rows,image_size)
-	labels = np.ndarray((num_rows, num_labels), dtype=np.int32)
-	return dataset, labels
-	
+# === CONSTRUCT DATASET ===	
 def randomize(dataset,labels):
 	permutation = np.random.permutation(labels.shape[0])
 	shuffled_dataset = np.empty(dataset.shape, dtype=dataset.dtype)
@@ -91,43 +83,20 @@ def construct_datasets(data_path,pickle_file_path,image_size,max_value,validatio
 	valid_labels = None 
 	test_dataset = None
 	""" Read train.csv first """
-	with open(data_path + 'train.csv', 'rb') as csvfile:
-		print('Reading train csv file...')
-		reader = csv.reader(csvfile, delimiter=',')
-		num_rows = sum(1 for row in reader)
-		num_images = num_rows - 1
-		csvfile.seek(0)
-		print(num_rows,'rows counted')
-		dataset, labels = initialize_array(num_images,image_size,num_labels)
-		print('Train Data set', dataset.shape, labels.shape)
-		id = 0
-		for row in reader:
-			# skip first row
-			if id > 0:
-				dataset[id-1] = row[1:]
-				labels[id-1] = one_hot_vector(num_labels,row[0])
-			id += 1
-		print(id, 'rows read')
+	train = pd.read_csv(data_path + "train.csv").as_matrix()
+	dataset = np.delete(train, 0, axis=1)
+	labels_array = train[:,0]
+	# Converts each label to one hot vector
+	labels = np.ndarray((len(labels_array), num_labels), dtype=np.int32)
+	for i in range(len(labels_array)):
+		label = labels_array[i]
+		labels[i] = one_hot_vector(num_labels,label)
+	
 	shuffled_dataset, shuffled_labels = randomize(dataset, labels)
 	train_dataset, train_labels, valid_dataset, valid_labels = split_with_proportion(shuffled_dataset,shuffled_labels,validation_proportion)
 	
 	""" Read test.csv """
-	with open(data_path + 'test.csv', 'rb') as csvfile:
-		print('Reading test csv file...')
-		reader = csv.reader(csvfile, delimiter=',')
-		num_rows = sum(1 for row in reader)
-		num_images = num_rows - 1
-		csvfile.seek(0)
-		print(num_rows,'rows counted')
-		test_dataset = initialize_dataset_array(num_images,image_size)
-		print('Test Data set', test_dataset.shape)
-		id = 0
-		for row in reader:
-			# skip first row
-			if id > 0:
-				test_dataset[id-1] = row[0:]
-			id += 1
-		print(id, 'rows read')
+	test_dataset  = pd.read_csv(data_path + "test.csv").as_matrix()
 	
 	print('Datasets constructed')
 	train_dataset = normalize(train_dataset,max_value)
@@ -142,7 +111,7 @@ def get_datasets():
 	if os.path.isfile(pickle_file_path):
 		return load(pickle_file_path)
 	else:
-		return construct_datasets(data_path,pickle_file_path,image_size,max_value,validation_proportion)
+		return construct_datasets(data_path,pickle_file_path,image_size,max_pixel_value,validation_proportion)
 		
 # === VERIFY DATA ===
 def row_to_matrix(image_size,row):
