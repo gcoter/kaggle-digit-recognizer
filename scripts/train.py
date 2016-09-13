@@ -21,10 +21,6 @@ print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape)
 
-# === HYPERPARAMETERS ===
-initial_learning_rate = 1e-2
-dropout_keep_prob = 0.5
-
 # === DEFINE MODEL ===
 model = models.SimpleConvNet() # <-- define the model here
 	
