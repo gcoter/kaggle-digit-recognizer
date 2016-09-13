@@ -59,7 +59,7 @@ class AbstractModel(object):
 class MLP(AbstractModel):
 	def __init__(self):
 		super(MLP,self).__init__()
-		self.initial_learning_rate = 1E-3
+		self.initial_learning_rate = 1e-3
 		self.dropout_keep_prob = 0.5
 		self.construct()
 		
@@ -71,7 +71,7 @@ class SimpleConvNet(AbstractModel):
 	def __init__(self):
 		super(SimpleConvNet,self).__init__()
 		self.patch_size = 5
-		self.initial_learning_rate = 1e-4
+		self.initial_learning_rate = 1e-3
 		self.dropout_keep_prob = 0.5
 		self.construct()
 		
@@ -96,7 +96,7 @@ class SimpleConvNet(AbstractModel):
 class InceptionConvNetV1(AbstractModel):
 	def __init__(self):
 		super(InceptionConvNetV1,self).__init__()
-		self.initial_learning_rate = 1e-2
+		self.initial_learning_rate = 1e-3
 		self.dropout_keep_prob = 0.5
 		self.construct()
 		
@@ -137,7 +137,7 @@ class InceptionConvNetV1(AbstractModel):
 class InceptionConvNetV2(AbstractModel):
 	def __init__(self):
 		super(InceptionConvNetV2,self).__init__()
-		self.initial_learning_rate = 1e-2
+		self.initial_learning_rate = 1e-3
 		self.dropout_keep_prob = 0.5
 		self.construct()
 		
