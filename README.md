@@ -46,7 +46,7 @@ I noticed it speeds up training on my CPU, however for the moment I haven't succ
 | ---------------------- |:------:|:----------:|:-----------:|:----------------------:|
 | Simple MLP             | 10     | 100        | 3 min 41 s  | 94.70%                 |
 | Simple ConvNet         | 10     | 50         | 59 min 48 s | 98.67%                 |
-| Inception ConvNet V1   | 10     | 80         | 38 min 10 s | 97.00%                 |
+| Inception ConvNet V1   | 20     | 50         | 76 min 55 s | 99.10%                 |
 | Inception ConvNet V2   | 10     | 100        | 33 min 11 s | 95.20%                 |
 
 ## References
