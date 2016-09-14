@@ -51,6 +51,9 @@ class AbstractModel(object):
 			# Predictions for the training, validation, and test data.
 			self.prediction = tf.nn.softmax(self.logits_out)
 			
+			# Add ops to save and restore all the variables.
+			self.saver = tf.train.Saver()
+
 	@abc.abstractmethod
 	def model(self,input):
 		""" Model definition here (must return logits) """

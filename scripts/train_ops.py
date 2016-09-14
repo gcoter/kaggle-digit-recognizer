@@ -39,6 +39,9 @@ def run_training(session, model, num_epochs, display_step, batch_size, train_dat
 	num_steps = num_steps_per_epoch * num_epochs
 	step_id = 0
 	
+	save_path = '../parameters/model.ckpt'
+	valid_accuracy_max = {'value' : 0.0, 'step' : 0}
+	
 	print('*** Start training',num_epochs,'epochs (',num_steps,'steps) with batch size',batch_size,'***')
 	for epoch in range(num_epochs):
 		print('=== Start epoch',epoch,'===')
@@ -65,6 +68,14 @@ def run_training(session, model, num_epochs, display_step, batch_size, train_dat
 				valid_accuracy = accuracy(valid_prediction, valid_labels)
 				print("Validation accuracy: %.1f%%" % valid_accuracy)
 				
+				# Create a checkpoint when a new max is reached
+				if valid_accuracy > valid_accuracy_max['value']:
+					model.saver.save(session, save_path)
+					valid_accuracy_max['value'] = valid_accuracy
+					valid_accuracy_max['step'] = step_id
+					print("New max value:",valid_accuracy_max['value'],"%")
+					print("Model saved to",save_path)
+				
 				# For plotting
 				display_steps.append(step_id)
 				train_points.append(minibatch_accuracy)
@@ -83,9 +94,13 @@ def run_training(session, model, num_epochs, display_step, batch_size, train_dat
 	
 	total_time_minutes, total_time_seconds = seconds2minutes(total_time)
 	
+	# Restore from checkpoint (parameters that give the best accuracy)
+	model.saver.restore(session, save_path)
+	print("Model restored from step",valid_accuracy_max['step'],"(expected accuracy:",valid_accuracy_max['value'],"%)")
+	
 	valid_prediction = session.run(model.prediction, feed_dict={model.batch : valid_dataset, model.labels : valid_labels, model.keep_prob : 1.0})
 	valid_accuracy = accuracy(valid_prediction, valid_labels)
-	print("Validation accuracy: %.1f%%" % valid_accuracy)
+	print("Final validation accuracy: %.1f%%" % valid_accuracy)
 	
 	print("*** Total time :",total_time_minutes,"minutes and",total_time_seconds,"seconds (",total_time,"s)***")
 	
