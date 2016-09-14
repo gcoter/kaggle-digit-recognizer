@@ -22,10 +22,10 @@ print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape)
 
 # === DEFINE MODEL ===
-model = models.SimpleConvNet() # <-- define the model here
+model = models.InceptionConvNetV2() # <-- define the model here
 	
 # === TRAINING ===
-batch_size = 100
+batch_size = 50
 num_epochs = 10
 display_step = 100
 
