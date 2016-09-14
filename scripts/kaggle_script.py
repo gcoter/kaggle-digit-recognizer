@@ -2,6 +2,7 @@
 I ran this script directly on Kaggle.
 
 It executes only what is necessary to run a model using one Inception Module.
+Inception Module greatly improved performances on my CPU while keeping very good accuracy (98.6 %)
 
 My implementation of the Inception Module is inspired from https://www.youtube.com/watch?v=VxhSouuSZDY
 """
@@ -102,6 +103,13 @@ validation_proportion = 0.050
 data_path = '../data/' # The competition datafiles are in the directory ../input
 results_path = '../results/'
 output_file_path = results_path + 'submission.csv'
+display_step = 100
+
+# === HYPERPARAMETERS ===
+initial_learning_rate = 1e-3
+dropout_keep_prob = 0.5
+batch_size = 50
+num_epochs = 10
 
 # === CONSTRUCT DATASET ===
 """ Read train.csv first """
@@ -128,10 +136,6 @@ train_dataset = normalize(train_dataset,max_pixel_value)
 valid_dataset = normalize(valid_dataset,max_pixel_value)
 test_dataset = normalize(test_dataset,max_pixel_value)
 print('Datasets normalized')
-
-# === HYPERPARAMETERS ===
-initial_learning_rate = 1e-3
-dropout_keep_prob = 0.5
 
 # === DEFINE MODEL ===
 graph = tf.Graph()
@@ -188,10 +192,6 @@ with graph.as_default():
 	prediction = tf.nn.softmax(logits_out)
 	
 # === TRAINING ===
-batch_size = 50
-num_epochs = 20
-display_step = 100
-
 with tf.Session(graph=graph) as session:
 	session.run(tf.initialize_all_variables())
 	
