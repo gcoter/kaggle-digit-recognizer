@@ -2,6 +2,7 @@
 I ran this script directly on Kaggle.
 
 It executes only what is necessary to run a model using one Inception Module.
+
 Inception Module greatly improved performances on my CPU while keeping very good accuracy (98.6 %)
 
 My implementation of the Inception Module is inspired from https://www.youtube.com/watch?v=VxhSouuSZDY
@@ -13,7 +14,6 @@ import csv
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 
 # =========
 # FUNCTIONS
@@ -100,8 +100,8 @@ image_size = 28
 max_pixel_value = 255
 num_labels = 10
 validation_proportion = 0.050
-data_path = '../data/' # The competition datafiles are in the directory ../input
-results_path = '../results/'
+data_path = '../input/' # The competition datafiles are in the directory ../input
+results_path = './'
 output_file_path = results_path + 'submission.csv'
 display_step = 100
 
@@ -175,7 +175,7 @@ with graph.as_default():
 	with tf.variable_scope('max_pool_2'):
 		max_pool_2 = max_pool(inception_output) # (N,7,7,64)
 		
-	image_size_after_conv = image_size/4
+	image_size_after_conv = image_size//4
 		
 	reshaped_conv_output = tf.reshape(max_pool_2, [-1, image_size_after_conv*image_size_after_conv*64]) # (N,7*7*64)
 	hidden = simple_relu_layer(reshaped_conv_output, shape=[image_size_after_conv*image_size_after_conv*64,1024],dropout_keep_prob=dropout_keep_prob)
@@ -198,7 +198,7 @@ with tf.Session(graph=graph) as session:
 	total_time = 0.0
 	begin_time = time_0 = time.time()
 	
-	num_steps_per_epoch = len(train_dataset)/batch_size
+	num_steps_per_epoch = len(train_dataset)//batch_size
 	num_steps = num_steps_per_epoch * num_epochs
 	step_id = 0
 	
@@ -249,7 +249,7 @@ with tf.Session(graph=graph) as session:
 	
 	# === TEST ===
 	test_prediction = []
-	num_test_steps = len(test_dataset)/batch_size
+	num_test_steps = len(test_dataset)//batch_size
 	print('*** Start testing (',num_test_steps,'steps ) ***')
 	for step in range(num_test_steps):
 		offset = (step * batch_size) % (test_dataset.shape[0] - batch_size)
@@ -262,7 +262,7 @@ with tf.Session(graph=graph) as session:
 	
 # === GENERATE SUBMISSION FILE ===
 print('Generating submission file...')
-with open(output_file_path, 'wb') as csvfile:
+with open(output_file_path, 'w') as csvfile:
 	writer = csv.writer(csvfile, delimiter=',')
 	writer.writerow(['ImageId','Label'])
 	print(len(test_prediction))
