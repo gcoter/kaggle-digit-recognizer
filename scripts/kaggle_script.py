@@ -45,12 +45,24 @@ def one_hot_vector(num_labels,label):
 	vector[int(label)] = 1
 	return vector
 	
-def new_weights(shape):
-	initial = tf.truncated_normal(shape, stddev=0.1)
+def new_weights(shape, xavier=True):
+	dev = 1.0
+	if xavier:
+		if len(shape) == 2:
+			dev = 1/shape[0]
+		elif len(shape) == 4:
+			dev = 1/(shape[0]*shape[1]*shape[2])
+	initial = tf.random_normal(shape, stddev=dev)
 	return tf.Variable(initial)
-
-def new_biases(shape):
-	initial = tf.constant(0.1, shape=shape)
+	
+def new_biases(shape, xavier=True):
+	dev = 1.0
+	if xavier:
+		if len(shape) == 2:
+			dev = 1/shape[0]
+		elif len(shape) == 4:
+			dev = 1/(shape[0]*shape[1]*shape[2])
+	initial = tf.random_normal(shape, stddev=dev)
 	return tf.Variable(initial)
 
 def simple_linear_layer(input,shape):
@@ -69,6 +81,11 @@ def simple_relu_layer(input,shape,dropout_keep_prob=None):
 
 def conv2d(input, W):
 	return tf.nn.conv2d(input, W, strides=[1, 1, 1, 1], padding='SAME')
+	
+def simple_conv2d(input,currentDepth,newDepth,patch_size):
+	weights_conv = new_weights([patch_size,patch_size,currentDepth,newDepth])
+	conv = conv2d(input, weights_conv)
+	return conv
 	
 def complete_conv2d(input, currentDepth, newDepth, patch_size):
 	weights_conv = new_weights([patch_size,patch_size,currentDepth,newDepth])
@@ -99,17 +116,19 @@ def accuracy(predictions, labels):
 image_size = 28
 max_pixel_value = 255
 num_labels = 10
-validation_proportion = 0.050
-data_path = '../input/' # The competition datafiles are in the directory ../input
-results_path = './'
+validation_proportion = 0.1
+data_path = '../data/' # The competition datafiles are in the directory ../input
+results_path = '../results/'
 output_file_path = results_path + 'submission.csv'
+parameters_path = "../parameters/"
+model_path = parameters_path + "model.ckpt"
 display_step = 100
 
 # === HYPERPARAMETERS ===
 initial_learning_rate = 1e-3
 dropout_keep_prob = 0.5
-batch_size = 50
-num_epochs = 10
+batch_size = 100
+num_epochs = 25
 
 # === CONSTRUCT DATASET ===
 """ Read train.csv first """
@@ -151,35 +170,19 @@ with graph.as_default():
 	reshaped_input = tf.reshape(batch, [-1,image_size,image_size,1]) # (N,28,28,1)		
 	
 	with tf.variable_scope('conv_1'):
-		conv_1 = complete_conv2d(reshaped_input,currentDepth=1,newDepth=32,patch_size=5) # (N,28,28,32)
+		conv_1 = complete_conv2d(reshaped_input,currentDepth=1,newDepth=32,patch_size=3) # (N,28,28,32)
 	with tf.variable_scope('max_pool_1'):
 		max_pool_1 = max_pool(conv_1) # (N,14,14,32)
-	""" Inception module """
-	with tf.variable_scope('inception_1'):
-		inception_input = max_pool_1
-		with tf.variable_scope('1x1_branch'):
-			with tf.variable_scope('initial_1x1'):
-				initial_1x1 = complete_conv2d(inception_input,currentDepth=32,newDepth=8,patch_size=1) # (N,14,14,8)
-			with tf.variable_scope('5x5'):
-				conv_5x5 = complete_conv2d(initial_1x1,currentDepth=8,newDepth=16,patch_size=5) # (N,14,14,16)
-			with tf.variable_scope('3x3'):
-				conv_3x3 = complete_conv2d(initial_1x1,currentDepth=8,newDepth=16,patch_size=3) # (N,14,14,16)
-		with tf.variable_scope('avg_pool_branch'):
-			with tf.variable_scope('initial_avg_pool'):
-				initial_avg_pool = average_pool(inception_input, stride=1) # (N,14,14,32)
-			with tf.variable_scope('1x1'):
-				conv_1x1 = complete_conv2d(initial_avg_pool,currentDepth=32,newDepth=24,patch_size=1) # (N,14,14,24)
-		with tf.variable_scope('concatenation'):
-			inception_output = tf.concat(3, [initial_1x1, conv_5x5, conv_3x3, conv_1x1]) # (N,14,14,64)
-	
+	with tf.variable_scope('conv_2'):
+		conv_2 = complete_conv2d(max_pool_1,currentDepth=32,newDepth=64,patch_size=3) # (N,14,14,64)
 	with tf.variable_scope('max_pool_2'):
-		max_pool_2 = max_pool(inception_output) # (N,7,7,64)
+		max_pool_2 = max_pool(conv_2) # (N,7,7,64)
 		
 	image_size_after_conv = image_size//4
 		
 	reshaped_conv_output = tf.reshape(max_pool_2, [-1, image_size_after_conv*image_size_after_conv*64]) # (N,7*7*64)
-	hidden = simple_relu_layer(reshaped_conv_output, shape=[image_size_after_conv*image_size_after_conv*64,1024],dropout_keep_prob=dropout_keep_prob)
-	logits_out = simple_linear_layer(hidden, shape=[1024,num_labels])
+	hidden_1 = simple_relu_layer(reshaped_conv_output, shape=[image_size_after_conv*image_size_after_conv*64,1000],dropout_keep_prob=dropout_keep_prob)
+	logits_out = simple_linear_layer(hidden_1, shape=[1000,num_labels])
 
 	# Cross entropy loss
 	with tf.name_scope("loss") as scope:
@@ -191,9 +194,21 @@ with graph.as_default():
 	# Predictions for the training, validation, and test data.
 	prediction = tf.nn.softmax(logits_out)
 	
+def test_on_valid_data(session,valid_dataset,valid_labels,batch_size):
+	num_valid_examples = len(valid_dataset)
+	num_steps = num_valid_examples//batch_size
+	avg_accuracy = 0.0
+	for step in range(num_steps):
+		batch_data = valid_dataset[step * batch_size:(step + 1) * batch_size]
+		batch_labels = valid_labels[step * batch_size:(step + 1) * batch_size]
+		minibatch_accuracy = accuracy(session.run(prediction, feed_dict={batch : batch_data, keep_prob : 1.0}), batch_labels)
+		avg_accuracy += minibatch_accuracy
+	return avg_accuracy/num_steps
+	
 # === TRAINING ===
 with tf.Session(graph=graph) as session:
-	session.run(tf.initialize_all_variables())
+	saver = tf.train.Saver()
+	session.run(tf.global_variables_initializer())
 	
 	total_time = 0.0
 	begin_time = time_0 = time.time()
@@ -201,6 +216,8 @@ with tf.Session(graph=graph) as session:
 	num_steps_per_epoch = len(train_dataset)//batch_size
 	num_steps = num_steps_per_epoch * num_epochs
 	step_id = 0
+	
+	valid_accuracy_max = 0.0
 	
 	print('*** Start training',num_epochs,'epochs (',num_steps,'steps) with batch size',batch_size,'***')
 	for epoch in range(num_epochs):
@@ -224,9 +241,13 @@ with tf.Session(graph=graph) as session:
 				print("Minibatch accuracy: %.1f%%" % minibatch_accuracy)
 
 				# Calculate accuracy on validation set
-				valid_prediction = session.run(prediction, feed_dict={batch : valid_dataset, labels : valid_labels, keep_prob : 1.0})
-				valid_accuracy = accuracy(valid_prediction, valid_labels)
+				valid_accuracy = test_on_valid_data(session,valid_dataset,valid_labels,batch_size)
 				print("Validation accuracy: %.1f%%" % valid_accuracy)
+				
+				if valid_accuracy > valid_accuracy_max:
+					saver.save(session, model_path)
+					valid_accuracy_max = valid_accuracy
+					print("Parameters saved to",model_path)
 				
 				# Time spent is measured
 				t = time.time()
@@ -240,6 +261,9 @@ with tf.Session(graph=graph) as session:
 	total_time = time.time() - begin_time
 	
 	total_time_minutes, total_time_seconds = seconds2minutes(total_time)
+	
+	saver.restore(session, model_path)
+	print("Parameters restored from",model_path,"( valid_accuracy_max =",valid_accuracy_max,")")
 	
 	valid_prediction = session.run(prediction, feed_dict={batch : valid_dataset, labels : valid_labels, keep_prob : 1.0})
 	valid_accuracy = accuracy(valid_prediction, valid_labels)
