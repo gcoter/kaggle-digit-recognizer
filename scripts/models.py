@@ -174,7 +174,7 @@ class InceptionConvNetV2(AbstractModel):
 		with tf.variable_scope('max_pool_2'):
 			self.max_pool_2 = layers.max_pool(self.inception_output) # (N,7,7,64)
 			
-		image_size_after_conv = image_size/4
+		image_size_after_conv = image_size//4
 			
 		self.reshaped_conv_output = tf.reshape(self.max_pool_2, [-1, image_size_after_conv*image_size_after_conv*64]) # (N,7*7*64)
 		self.hidden = layers.simple_relu_layer(self.reshaped_conv_output, shape=[image_size_after_conv*image_size_after_conv*64,1024],dropout_keep_prob=self.dropout_keep_prob)

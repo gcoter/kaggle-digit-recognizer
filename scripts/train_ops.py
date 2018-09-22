@@ -35,7 +35,7 @@ def run_training(session, model, num_epochs, display_step, batch_size, train_dat
 	total_time = 0.0
 	begin_time = time_0 = time.time()
 	
-	num_steps_per_epoch = len(train_dataset)/batch_size
+	num_steps_per_epoch = len(train_dataset)//batch_size
 	num_steps = num_steps_per_epoch * num_epochs
 	step_id = 0
 	
